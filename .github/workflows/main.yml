@@ -1,1 +1,21 @@
+name: yahoo-finance-fetch
 
+on:
+  schedule:
+    - cron: '10 8 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  fetch-data:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run data fetch
+        run: python test.py
+      - name: Upload yf.csv
+        uses: actions/upload-artifact@v4
+        with:
+          name: yf-data
+          path: yf.csv
