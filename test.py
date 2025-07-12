@@ -1,9 +1,7 @@
-File: test.py
-
 import csv
-import random
 import time
-import curl_cffi.requests as requests
+import random
+from curl_cffi import requests
 import yfinance as yf
 
 USER_AGENTS = [
@@ -21,79 +19,43 @@ USER_AGENTS = [
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 12_6_8) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Safari/605.1.15"
 ]
 
-def fetch_info(symbol):
-    session = requests.Session()
-    retries = 4
-    delay_base = 2.0
-n    for attempt in range(retries):
-        session.headers.update({"User-Agent": random.choice(USER_AGENTS)})
-        try:
-            ticker = yf.Ticker(symbol, session=session)
-            info = ticker.info
-            return info
-        except Exception:
-            wait = delay_base * (attempt + 1) + random.random() * 0.5
-            time.sleep(wait)
-    return {}
+def get_session():
+    s = requests.Session()
+    s.headers.update({"User-Agent": random.choice(USER_AGENTS)})
+    return s
 
-with open('data1.csv', newline='') as csvfile, open('yf.csv', 'w', newline='', encoding='utf-8') as outfile:
-    reader = csv.DictReader(csvfile)
-    fieldnames = ['T', 'P', 'B', 'A', 'M', 'O', 'C', 'I', 'S']
-    writer = csv.DictWriter(outfile, fieldnames=fieldnames)
-    writer.writeheader()
-    for row in reader:
-        symbol = row['T'].strip()
-        info = fetch_info(symbol)
-        out = {
-            'T': symbol,
-            'P': info.get('currentPrice', '') or '',
-            'B': info.get('bid', '') or '',
-            'A': info.get('ask', '') or '',
-            'M': info.get('targetMeanPrice', '') or '',
-            'O': info.get('numberOfAnalystOpinions', '') or '',
-            'C': info.get('marketCap', '') or '',
-            'I': info.get('industry', '') or '',
-            'S': info.get('sector', '') or ''
-        }
-        writer.writerow(out)
-        time.sleep(2 + random.random() * 0.5)
+with open("data1.csv", newline="") as fin:
+    reader = csv.DictReader(fin)
+    symbols = [row["T"] for row in reader]
 
-
----
-
-File: requirements.txt
-
-yfinance
-curl_cffi
-
-
----
-
-File: .github/workflows/main.yml
-
-name: fetch-yf-data
-on:
-  push:
-    branches:
-      - main
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.x'
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Run fetch script
-        run: python test.py
-      - name: Upload yf.csv
-        uses: actions/upload-artifact@v4
-        with:
-          name: yf-data
-          path: yf.csv
-
+with open("yf.csv", "w", newline="", encoding="utf-8") as fout:
+    writer = csv.writer(fout)
+    writer.writerow(["T","P","B","A","M","O","C","I","S"])
+    for sym in symbols:
+        info = {}
+        for attempt in range(4):
+            try:
+                sess = get_session()
+                yf.utils.requests = sess
+                info = yf.Ticker(sym).info or {}
+                break
+            except Exception:
+                if attempt == 0:
+                    wait = random.uniform(4,4.5)
+                elif attempt == 1:
+                    wait = random.uniform(6,6.5)
+                elif attempt == 2:
+                    wait = random.uniform(8,8.5)
+                else:
+                    break
+                time.sleep(wait)
+        P = info.get("currentPrice","") or ""
+        B = info.get("bid","") or ""
+        A = info.get("ask","") or ""
+        M = info.get("targetMeanPrice","") or ""
+        O = info.get("numberOfAnalystOpinions","") or ""
+        C = info.get("marketCap","") or ""
+        I = info.get("industry","") or ""
+        S = info.get("sector","") or ""
+        writer.writerow([sym, P, B, A, M, O, C, I, S])
+        time.sleep(random.uniform(2,2.5))
