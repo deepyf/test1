@@ -1,7 +1,9 @@
 name: ci
+
 on:
   schedule:
-    - cron: '30 8 * * 1-5'
+    - cron: '55 8 * * 1-5'
+
 jobs:
   run:
     runs-on: ubuntu-latest
